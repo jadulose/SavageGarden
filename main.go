@@ -1,15 +1,26 @@
 package main
 
 import (
-	"net/http"
-
-	"github.com/labstack/echo/v4"
+	"fmt"
+	"os"
 )
 
 func main() {
-	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
-	e.Logger.Fatal(e.Start(":1323"))
+	fmt.Println("你好，世界！")
+	conf, err := ReadConfig("tmp/conf.toml")
+	PrintAndExit(err)
+	db, err := conf.Database.Open()
+	PrintAndExit(err)
+	defer db.Close()
+	var version string
+	err = db.QueryRow("SELECT VERSION()").Scan(&version)
+	PrintAndExit(err)
+	fmt.Println(version)
+}
+
+func PrintAndExit(err error) {
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }
