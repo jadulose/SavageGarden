@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	Database DBConfig
+	Database DBConf
+	Mail     MailConf
 }
 
 func ReadConfig(path string) (*Config, error) {

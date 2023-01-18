@@ -12,10 +12,17 @@ func main() {
 	db, err := conf.Database.Open()
 	PrintAndExit(err)
 	defer db.Close()
-	var version string
-	err = db.QueryRow("SELECT VERSION()").Scan(&version)
+	err = db.Ping()
 	PrintAndExit(err)
-	fmt.Println(version)
+
+	mail, err := conf.Mail.CreateTestMsg("peilin.fan@fansionia.xyz")
+	PrintAndExit(err)
+	mClient, err := conf.Mail.Open()
+	PrintAndExit(err)
+	fmt.Println("正在发送邮件...")
+	err = mClient.DialAndSend(mail)
+	PrintAndExit(err)
+	fmt.Println("已成功发送邮件")
 }
 
 func PrintAndExit(err error) {
