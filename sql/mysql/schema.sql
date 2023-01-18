@@ -3,12 +3,12 @@ create table class
     c_id   int auto_increment
         primary key,
     c_name varchar(20) not null,
-    c_s_id int         null
+    c_s_id char(10)    null
 );
 
 create table student
 (
-    s_id   int         not null
+    s_id   char(10)    not null
         primary key,
     s_name varchar(20) not null,
     s_mail varchar(50) not null,
@@ -20,7 +20,7 @@ create table student
 );
 
 alter table class
-    add constraint class_student_sid_fk
+    add constraint class_student_s_id_fk
         foreign key (c_s_id) references student (s_id)
             on update cascade on delete set null;
 
@@ -51,7 +51,7 @@ create table submit
     sm_id      int auto_increment
         primary key,
     sm_h_id    int                                    not null,
-    sm_s_id    int                                    not null,
+    sm_s_id    char(10)                               not null,
     sm_name    varchar(50)                            not null,
     sm_time    datetime   default current_timestamp() not null,
     sm_ip      char(15)                               not null,
@@ -63,20 +63,23 @@ create table submit
             on update cascade on delete cascade,
     constraint submit_student_s_id_fk
         foreign key (sm_s_id) references student (s_id)
-            on update cascade on delete cascade
 );
 
 create table choose
 (
-    ch_h_id  int not null,
-    ch_s_id  int not null,
-    ch_sm_id int not null,
+    ch_h_id  int      not null,
+    ch_s_id  char(10) not null,
+    ch_sm_id int      not null,
     primary key (ch_h_id, ch_s_id),
     constraint choose_homework_h_id_fk
-        foreign key (ch_h_id) references homework (h_id),
+        foreign key (ch_h_id) references homework (h_id)
+            on update cascade on delete cascade,
     constraint choose_student_s_id_fk
-        foreign key (ch_s_id) references student (s_id),
+        foreign key (ch_s_id) references student (s_id)
+            on update cascade on delete cascade,
     constraint choose_submit_sm_id_fk
         foreign key (ch_sm_id) references submit (sm_id)
+            on update cascade on delete cascade
 );
+
 
