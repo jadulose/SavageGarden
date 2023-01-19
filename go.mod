@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/go-sql-driver/mysql v1.7.0
+	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.10.0
 	github.com/pelletier/go-toml/v2 v2.0.6
 	github.com/wneessen/go-mail v0.3.8

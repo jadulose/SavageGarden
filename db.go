@@ -22,7 +22,7 @@ func (c *DBConf) Open() (*sql.DB, error) {
 	var name string
 	switch c.Type {
 	case "mysql":
-		name = fmt.Sprintf("%s:%s@(%s:%d)/%s", c.User, c.Password, c.Host, c.Port, c.Name)
+		name = fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8mb4&parseTime=True", c.User, c.Password, c.Host, c.Port, c.Name)
 	default:
 		return nil, fmt.Errorf(DBTypeNotSupportedMsg, c.Type)
 	}
@@ -34,6 +34,12 @@ type DBStmt struct {
 	StFindStudentById           *sql.Stmt
 	StFindStudentPasswordById   *sql.Stmt
 	StUpdateStudentPasswordById *sql.Stmt
+	// Session
+	StCreateSessionByCookie             *sql.Stmt
+	StCreateSessionByCookieWithLoggedIn *sql.Stmt
+	StFindSessionExpireById             *sql.Stmt
+	StDeleteSessionById                 *sql.Stmt
+	StVerifySessionIsLoggedIn           *sql.Stmt
 }
 
 func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
@@ -41,6 +47,7 @@ func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
 	var err error
 	switch c.Type {
 	case "mysql":
+		// Student
 		stmt.StFindStudentById, err = db.Prepare(
 			`SELECT s_id,s_name,s_mail,s_pass,s_c_id FROM student WHERE s_id=?`)
 		if err != nil {
@@ -53,6 +60,32 @@ func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
 		}
 		stmt.StUpdateStudentPasswordById, err = db.Prepare(
 			`UPDATE student SET s_pass=? WHERE s_id=?`)
+		if err != nil {
+			return nil, err
+		}
+		// Session
+		stmt.StCreateSessionByCookie, err = db.Prepare(
+			`INSERT INTO session(ss_id,ss_expire) VALUES(?,?)`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StCreateSessionByCookieWithLoggedIn, err = db.Prepare(
+			`INSERT INTO session(ss_id,ss_s_id,ss_expire) VALUES(?,?,?)`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StFindSessionExpireById, err = db.Prepare(
+			`SELECT ss_expire FROM session WHERE ss_id=?`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StDeleteSessionById, err = db.Prepare(
+			`DELETE FROM session WHERE ss_id=?`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StVerifySessionIsLoggedIn, err = db.Prepare(
+			`SELECT NOT ISNULL(ss_s_id) FROM session WHERE ss_id=?`)
 		if err != nil {
 			return nil, err
 		}

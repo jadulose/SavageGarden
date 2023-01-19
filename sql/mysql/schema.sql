@@ -24,6 +24,17 @@ alter table class
         foreign key (c_s_id) references student (s_id)
             on update cascade on delete set null;
 
+create table session
+(
+    ss_id     char(36) not null
+        primary key,
+    ss_s_id   char(10) null,
+    ss_expire datetime not null,
+    constraint session_student_s_id_fk
+        foreign key (ss_s_id) references student (s_id)
+            on update cascade on delete set null
+);
+
 create table subject
 (
     sj_id    int auto_increment
@@ -48,21 +59,27 @@ create table homework
 
 create table submit
 (
-    sm_id      int auto_increment
+    sm_id       int auto_increment
         primary key,
-    sm_h_id    int                                    not null,
-    sm_s_id    char(10)                               not null,
-    sm_name    varchar(50)                            not null,
-    sm_time    datetime   default current_timestamp() not null,
-    sm_ip      char(15)                               not null,
-    sm_os      varchar(10)                            not null,
-    sm_browser varchar(20)                            not null,
-    sm_login   tinyint(1) default 0                   not null,
+    sm_h_id     int                                    not null,
+    sm_s_id     char(10)                               not null,
+    sm_ss_id    char(36)                               null,
+    sm_name     varchar(50)                            not null,
+    sm_time     datetime   default current_timestamp() not null,
+    sm_ip       char(15)                               not null,
+    sm_os       varchar(10)                            not null,
+    sm_browser  varchar(20)                            not null,
+    sm_login    tinyint(1) default 0                   not null,
+    sm_checksum char(64)                               not null,
     constraint submit_homework_h_id_fk
         foreign key (sm_h_id) references homework (h_id)
             on update cascade on delete cascade,
+    constraint submit_session_ss_id_fk
+        foreign key (sm_ss_id) references session (ss_id)
+            on update cascade on delete set null,
     constraint submit_student_s_id_fk
         foreign key (sm_s_id) references student (s_id)
+            on update cascade on delete cascade
 );
 
 create table choose

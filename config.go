@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Server   ServerConf
 	Database DBConf
 	Mail     MailConf
 }
@@ -22,4 +23,8 @@ func ReadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	return &conf, nil
+}
+
+type ServerConf struct {
+	Domain string
 }

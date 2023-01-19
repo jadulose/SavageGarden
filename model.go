@@ -1,5 +1,10 @@
 package main
 
+import (
+	"net/http"
+	"time"
+)
+
 type Student struct {
 	Id       string
 	Name     string
@@ -24,4 +29,37 @@ func (db *DBStmt) FindStudentPasswordById(id string) ([]byte, error) {
 func (db *DBStmt) UpdateStudentPasswordById(id string, password []byte) error {
 	_, err := db.StUpdateStudentPasswordById.Exec(password, id)
 	return err
+}
+
+type Session struct {
+	Id     string
+	Sid    string
+	Expire time.Time
+}
+
+func (db *DBStmt) CreateSessionByCookie(cookie *http.Cookie) error {
+	_, err := db.StCreateSessionByCookie.Exec(cookie.Value, cookie.Expires)
+	return err
+}
+
+func (db *DBStmt) CreateSessionByCookieWithLoggedIn(cookie *http.Cookie, sid string) error {
+	_, err := db.StCreateSessionByCookieWithLoggedIn.Exec(cookie.Value, sid, cookie.Expires)
+	return err
+}
+
+func (db *DBStmt) FindSessionExpireById(id string) (time.Time, error) {
+	var expire time.Time
+	err := db.StFindSessionExpireById.QueryRow(id).Scan(&expire)
+	return expire, err
+}
+
+func (db *DBStmt) DeleteSessionById(id string) error {
+	_, err := db.StDeleteSessionById.Exec(id)
+	return err
+}
+
+func (db *DBStmt) VerifySessionIsLoggedIn(id string) bool {
+	var rs bool
+	err := db.StVerifySessionIsLoggedIn.QueryRow(id).Scan(&rs)
+	return err == nil && rs
 }
