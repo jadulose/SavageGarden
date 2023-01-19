@@ -22,11 +22,27 @@ func main() {
 	stmt, err := conf.Database.Prepare(db)
 	PrintAndExit(err)
 
-	stu, err := stmt.FindStudentById("10003")
-	PrintAndExit(err)
-	fmt.Println(CheckPasswordHash("Zhang Hanlin", stu.Password))
-
 	e := echo.New()
+
+	e.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
+		Skipper: func(c echo.Context) bool {
+
+			return false
+		},
+		Validator: func(username, password string, c echo.Context) (bool, error) {
+			hash, err := stmt.FindStudentPasswordById(username)
+			if err != nil {
+				return false, nil
+			}
+			return CheckPasswordHash(password, hash), nil
+		},
+		Realm: "Savage Garden",
+	}))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
+
 	logger := NewZapLogger()
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogRemoteIP: true, LogMethod: true, LogURI: true, LogStatus: true,
@@ -41,9 +57,6 @@ func main() {
 		},
 	}))
 
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
 	e.Logger.Fatal(e.Start(":1323"))
 }
 

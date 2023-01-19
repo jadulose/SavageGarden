@@ -31,8 +31,9 @@ func (c *DBConf) Open() (*sql.DB, error) {
 
 type DBStmt struct {
 	// Student
-	StmtFindStudentById           *sql.Stmt
-	StmtUpdateStudentPasswordById *sql.Stmt
+	StFindStudentById           *sql.Stmt
+	StFindStudentPasswordById   *sql.Stmt
+	StUpdateStudentPasswordById *sql.Stmt
 }
 
 func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
@@ -40,12 +41,17 @@ func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
 	var err error
 	switch c.Type {
 	case "mysql":
-		stmt.StmtFindStudentById, err = db.Prepare(
+		stmt.StFindStudentById, err = db.Prepare(
 			`SELECT s_id,s_name,s_mail,s_pass,s_c_id FROM student WHERE s_id=?`)
 		if err != nil {
 			return nil, err
 		}
-		stmt.StmtUpdateStudentPasswordById, err = db.Prepare(
+		stmt.StFindStudentPasswordById, err = db.Prepare(
+			`SELECT s_pass FROM student WHERE s_id=?`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StUpdateStudentPasswordById, err = db.Prepare(
 			`UPDATE student SET s_pass=? WHERE s_id=?`)
 		if err != nil {
 			return nil, err
