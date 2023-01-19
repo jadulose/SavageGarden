@@ -5,7 +5,7 @@ import (
 )
 
 func HashPassword(password string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(password), 14)
+	return bcrypt.GenerateFromPassword([]byte(password), 12)
 }
 
 func CheckPasswordHash(password string, hash []byte) bool {

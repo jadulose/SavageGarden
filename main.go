@@ -2,6 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"net/http"
 	"os"
 )
 
@@ -14,15 +19,32 @@ func main() {
 	defer db.Close()
 	err = db.Ping()
 	PrintAndExit(err)
+	stmt, err := conf.Database.Prepare(db)
+	PrintAndExit(err)
 
-	mail, err := conf.Mail.CreateTestMsg("peilin.fan@fansionia.xyz")
+	stu, err := stmt.FindStudentById("10003")
 	PrintAndExit(err)
-	mClient, err := conf.Mail.Open()
-	PrintAndExit(err)
-	fmt.Println("正在发送邮件...")
-	err = mClient.DialAndSend(mail)
-	PrintAndExit(err)
-	fmt.Println("已成功发送邮件")
+	fmt.Println(CheckPasswordHash("Zhang Hanlin", stu.Password))
+
+	e := echo.New()
+	logger := NewZapLogger()
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogRemoteIP: true, LogMethod: true, LogURI: true, LogStatus: true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			logger.Info("request",
+				zap.String("remote_ip", v.RemoteIP),
+				zap.String("method", v.Method),
+				zap.String("uri", v.URI),
+				zap.Int("status", v.Status),
+			)
+			return nil
+		},
+	}))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
+	e.Logger.Fatal(e.Start(":1323"))
 }
 
 func PrintAndExit(err error) {
@@ -30,4 +52,14 @@ func PrintAndExit(err error) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func NewZapLogger() *zap.Logger {
+	conf := zap.NewDevelopmentConfig()
+	conf.DisableStacktrace = true
+	conf.DisableCaller = true
+	conf.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	conf.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006/01/02 15:04:05")
+	logger, _ := conf.Build()
+	return logger
 }
