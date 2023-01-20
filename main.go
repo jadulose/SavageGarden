@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -23,8 +24,24 @@ func main() {
 	stmt, err := conf.Database.Prepare(db)
 	PrintAndExit(err)
 
+	logger := NewZapLogger()
+	c := cron.New(cron.WithParser(cron.NewParser(
+		cron.Minute | cron.Hour | cron.Dom | cron.Month,
+	)))
+	// 每小时清除一次过期cookie
+	_, err = c.AddFunc("0 * * *", func() {
+		num, err := stmt.DeleteSessionExpired()
+		if err == nil {
+			logger.Info("cron", zap.Int("deleted_sessions", int(num)))
+		} else {
+			logger.Error("cron", zap.String("failed_delete_session", err.Error()))
+		}
+	})
+	PrintAndExit(err)
+
 	const CookieName = "savage_garden"
 	const CookieExpireDur = 7 * 24 * time.Hour
+	uuid.EnableRandPool()
 	NewCookie := func() *http.Cookie {
 		return &http.Cookie{
 			Name:     CookieName,
@@ -39,17 +56,18 @@ func main() {
 
 	e := echo.New()
 
-	// TODO 需要一个定期清除过期cookie的cron任务
 	// cookie setter
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// 如果没有cookie或cookie过期，则生成cookie并覆盖
+			var refresh bool
 			cookie, err := c.Cookie(CookieName)
-			refresh := err != nil
-			if !refresh {
-				expire, _ := stmt.FindSessionExpireById(cookie.Value)
-				if refresh = time.Now().After(expire); refresh {
-					_ = stmt.DeleteSessionById(cookie.Value)
+			if refresh = err != nil; !refresh { // ↓找到了cookie↓
+				notExpired, err := stmt.VerifySessionNotExpired(cookie.Value)
+				if refresh = err != nil; !refresh { // ↓数据库中找到session↓
+					if refresh = !notExpired; refresh { // ↓session已过期↓
+						_ = stmt.DeleteSessionById(cookie.Value)
+					}
 				}
 			}
 			if refresh {
@@ -61,7 +79,6 @@ func main() {
 		}
 	})
 
-	logger := NewZapLogger()
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogRemoteIP: true, LogMethod: true, LogURI: true, LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
@@ -83,7 +100,7 @@ func main() {
 		return func(c echo.Context) error {
 			// 只有cookie是已登录状态才可以访问后面内容
 			cookie, err := c.Cookie(CookieName)
-			if err == nil && stmt.VerifySessionIsLoggedIn(cookie.Value) {
+			if err == nil && stmt.VerifySessionLoggedIn(cookie.Value) {
 				return next(c)
 			} else {
 				c.Response().Header().Set(echo.HeaderWWWAuthenticate, "basic realm="+AuthRealm)

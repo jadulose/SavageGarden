@@ -47,19 +47,27 @@ func (db *DBStmt) CreateSessionByCookieWithLoggedIn(cookie *http.Cookie, sid str
 	return err
 }
 
-func (db *DBStmt) FindSessionExpireById(id string) (time.Time, error) {
-	var expire time.Time
-	err := db.StFindSessionExpireById.QueryRow(id).Scan(&expire)
-	return expire, err
-}
-
 func (db *DBStmt) DeleteSessionById(id string) error {
 	_, err := db.StDeleteSessionById.Exec(id)
 	return err
 }
 
-func (db *DBStmt) VerifySessionIsLoggedIn(id string) bool {
+func (db *DBStmt) DeleteSessionExpired() (int64, error) {
+	rs, err := db.StDeleteSessionExpired.Exec()
+	if err != nil {
+		return 0, err
+	}
+	return rs.RowsAffected()
+}
+
+func (db *DBStmt) VerifySessionNotExpired(id string) (bool, error) {
 	var rs bool
-	err := db.StVerifySessionIsLoggedIn.QueryRow(id).Scan(&rs)
+	err := db.StVerifySessionNotExpired.QueryRow(id).Scan(&rs)
+	return rs, err
+}
+
+func (db *DBStmt) VerifySessionLoggedIn(id string) bool {
+	var rs bool
+	err := db.StVerifySessionLoggedIn.QueryRow(id).Scan(&rs)
 	return err == nil && rs
 }

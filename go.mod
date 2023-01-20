@@ -7,6 +7,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/labstack/echo/v4 v4.10.0
 	github.com/pelletier/go-toml/v2 v2.0.6
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/wneessen/go-mail v0.3.8
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.5.0

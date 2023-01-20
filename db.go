@@ -37,9 +37,10 @@ type DBStmt struct {
 	// Session
 	StCreateSessionByCookie             *sql.Stmt
 	StCreateSessionByCookieWithLoggedIn *sql.Stmt
-	StFindSessionExpireById             *sql.Stmt
 	StDeleteSessionById                 *sql.Stmt
-	StVerifySessionIsLoggedIn           *sql.Stmt
+	StDeleteSessionExpired              *sql.Stmt
+	StVerifySessionNotExpired           *sql.Stmt
+	StVerifySessionLoggedIn             *sql.Stmt
 }
 
 func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
@@ -74,17 +75,22 @@ func (c *DBConf) Prepare(db *sql.DB) (*DBStmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		stmt.StFindSessionExpireById, err = db.Prepare(
-			`SELECT ss_expire FROM session WHERE ss_id=?`)
-		if err != nil {
-			return nil, err
-		}
 		stmt.StDeleteSessionById, err = db.Prepare(
 			`DELETE FROM session WHERE ss_id=?`)
 		if err != nil {
 			return nil, err
 		}
-		stmt.StVerifySessionIsLoggedIn, err = db.Prepare(
+		stmt.StDeleteSessionExpired, err = db.Prepare(
+			`DELETE FROM session WHERE ss_expire<NOW()`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StVerifySessionNotExpired, err = db.Prepare(
+			`SELECT ss_expire>NOW() FROM session WHERE ss_id=?`)
+		if err != nil {
+			return nil, err
+		}
+		stmt.StVerifySessionLoggedIn, err = db.Prepare(
 			`SELECT NOT ISNULL(ss_s_id) FROM session WHERE ss_id=?`)
 		if err != nil {
 			return nil, err
