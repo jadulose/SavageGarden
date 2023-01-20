@@ -95,22 +95,24 @@ func main() {
 	secure := e.Group("/secure")
 
 	const AuthRealm = "Savage Garden"
+	const IdKey = "student_id"
 	// cookie checker
 	secure.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// 只有cookie是已登录状态才可以访问后面内容
 			cookie, err := c.Cookie(CookieName)
-			if err == nil && stmt.VerifySessionLoggedIn(cookie.Value) {
-				return next(c)
-			} else {
-				c.Response().Header().Set(echo.HeaderWWWAuthenticate, "basic realm="+AuthRealm)
-				return echo.ErrUnauthorized
+			if err == nil {
+				sid, err := stmt.FindSessionSidById(cookie.Value)
+				if err == nil {
+					c.Set(IdKey, sid)
+					return next(c)
+				}
 			}
+			return c.Redirect(http.StatusTemporaryRedirect, "/login")
 		}
 	})
 
-	const IdKey = "student_id"
-	e.POST("/login", func(c echo.Context) error {
+	e.GET("/login", func(c echo.Context) error {
 		// 如果通过了Basic Auth，说明验证通过，新建一个已登录状态的cookie
 		if cookie, err := c.Cookie(CookieName); err == nil {
 			_ = stmt.DeleteSessionById(cookie.Value)
@@ -118,7 +120,6 @@ func main() {
 		cookie := NewCookie()
 		c.SetCookie(cookie)
 		_ = stmt.CreateSessionByCookieWithLoggedIn(cookie, c.Get(IdKey).(string))
-		c.Set(IdKey, nil)
 		return c.NoContent(http.StatusOK)
 	}, middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
 		Validator: func(username, password string, c echo.Context) (bool, error) {
@@ -135,7 +136,7 @@ func main() {
 		Realm: AuthRealm,
 	}))
 
-	e.POST("/logout", func(c echo.Context) error {
+	e.GET("/logout", func(c echo.Context) error {
 		if cookie, err := c.Cookie(CookieName); err == nil {
 			_ = stmt.DeleteSessionById(cookie.Value)
 		}
@@ -165,6 +166,7 @@ func PrintAndExit(err error) {
 
 func NewZapLogger() *zap.Logger {
 	conf := zap.NewDevelopmentConfig()
+	conf.OutputPaths = []string{"stdout"}
 	conf.DisableStacktrace = true
 	conf.DisableCaller = true
 	conf.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
